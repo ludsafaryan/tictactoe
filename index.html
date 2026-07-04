@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Крестики-Нолики Pro</title>
+<style>
+  :root {
+    --bg-color: #F5F5DC;
+    --board-bg: rgba(255, 255, 255, 0.6);
+    --cell-bg: #fff;
+    --x-color: #e74c3c;
+    --o-color: #00BFFF;
+    --text-color: #333;
+    --accent: #8e44ad;
+    --win-bg: #ffd700;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--bg-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-color);
+    padding: 20px;
+  }
+
+  h1 { 
+    margin-bottom: 15px; 
+    color: var(--accent);
+    font-size: 2.2rem;
+    text-align: center;
+  }
+
+  .score-board {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 25px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .score-x { color: var(--x-color); }
+  .score-o { color: var(--o-color); }
+
+  .controls {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .control-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .control-group label {
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 130px;
+  }
+
+  select {
+    flex: 1;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    font-size: 1rem;
+    cursor: pointer;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  
+  select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  button:hover { 
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  button:active {
+    transform: translateY(0);
+  }
+  
+  button.primary {
+    background: var(--accent);
+    color: white;
+  }
+  
+  button.secondary {
+    background: #95a5a6;
+    color: white;
+  }
+  
+  button.rules {
+    background: #f39c12;
+    color: white;
+  }
+
+  .status {
+    font-size: 1.4rem;
+    margin-bottom: 25px;
+    font-weight: bold;
+    min-height: 35px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .status-symbol { 
+    font-weight: 900; 
+    font-size: 1.6rem; 
+  }
+
+  .board-wrapper {
+    padding: 20px;
+    background: var(--board-bg);
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  }
+
+  .board {
+    display: grid;
+    gap: 8px;
+  }
+
+  .cell {
+    background: var(--cell-bg);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    font-weight: 900;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+    width: 70px;
+    height: 70px;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .cell:hover:not(.taken) { 
+    background: #ecf0f1;
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .cell.x { 
+    color: var(--x-color);
+    animation: placeMark 0.3s ease;
+  }
+  
+  .cell.o { 
+    color: var(--o-color);
+    animation: placeMark 0.3s ease;
+  }
+  
+  .cell.win { 
+    background: var(--win-bg);
+    animation: winPulse 0.6s ease infinite alternate;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+  
+  @keyframes placeMark {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  
+  @keyframes winPulse {
+    from { 
+      transform: scale(1);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+    to { 
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+    }
+  }
+
+  .modal-overlay {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.6); 
+    display: none; 
+    align-items: center;
+    justify-content: center; 
+    z-index: 1000; 
+    padding: 20px;
+    backdrop-filter: blur(3px);
+  }
+  
+  .modal-overlay.active { display: flex; }
+  
+  .modal {
+    background: white; 
+    border-radius: 20px; 
+    padding: 35px;
+    max-width: 500px; 
+    width: 100%; 
+    max-height: 85vh; 
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    position: relative;
+    animation: modalSlide 0.3s ease;
+  }
+  
+  @keyframes modalSlide {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  .modal h2 { 
+    color: var(--accent); 
+    margin-top: 0; 
+    margin-bottom: 20px; 
+    text-align: center; 
+    font-size: 2rem; 
+  }
+  
+  .modal h3 { 
+    color: var(--accent); 
+    margin-top: 20px; 
+    margin-bottom: 10px; 
+    font-size: 1.3rem; 
+  }
+  
+  .modal p, .modal li { 
+    line-height: 1.7; 
+    font-size: 1.05rem; 
+  }
+  
+  .modal ul { padding-left: 25px; }
+  .modal li { margin-bottom: 10px; }
+  
+  .modal .close-btn {
+    position: absolute; 
+    top: 15px; 
+    right: 20px; 
+    background: none; 
+    border: none;
+    font-size: 2rem; 
+    cursor: pointer; 
+    color: #999;
+    width: 40px; 
+    height: 40px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  
+  .modal .close-btn:hover { color: var(--accent); }
+  
+  .modal .example {
+    background: var(--bg-color); 
+    padding: 20px; 
+    border-radius: 12px; 
+    margin: 20px 0;
+    text-align: center;
+    font-size: 2rem; 
+    font-weight: bold;
+    color: var(--x-color);
+  }
+  
+  .modal .close-modal-btn {
+    display: block; 
+    margin: 25px auto 0; 
+    padding: 14px 40px;
+    background: var(--accent); 
+    color: white; 
+    border: none; 
+    border-radius: 12px;
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .modal .close-modal-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);
+  }
+
+  @media (max-width: 600px) {
+    .cell { 
+      width: 55px; 
+      height: 55px; 
+      font-size: 2.2rem; 
+    }
+    h1 { font-size: 1.8rem; }
+    .control-group { flex-direction: column; align-items: flex-start; }
+    .control-group label { min-width: auto; margin-bottom: 5px; }
+    select { width: 100%; }
+    .controls { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>Крестики-Нолики Pro</h1>
+
+  <div class="score-board">
+    <span class="score-x">✕ Игрок (X): <span id="scoreX">0</span></span>
+    <span class="score-o">◯ Бот/Игрок 2 (O): <span id="scoreO">0</span></span>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Режим:</label>
+      <select id="modeSelect">
+        <option value="bot">Против Бота</option>
+        <option value="pvp">Два игрока</option>
+      </select>
+    </div>
+    
+    <div class="control-group" id="symbolLabel">
+      <label>Твоя фишка:</label>
+      <select id="symbolSelect">
+        <option value="X">X (Красный)</option>
+        <option value="O">O (Голубой)</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <label>Размер:</label>
+      <select id="sizeSelect">
+        <option value="3">3 x 3</option>
+        <option value="6" selected>6 x 6</option>
+        <option value="8">8 x 8</option>
+        <option value="10">10 x 10</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Победа в ряд:</label>
+      <select id="winSelect"></select>
+    </div>
+
+    <div class="button-group">
+      <button class="primary" onclick="resetGame()">Рестарт</button>
+      <button class="secondary" onclick="clearScore()">Сброс счета</button>
+      <button class="rules" onclick="showRules()">📖 Правила</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">Ходят: <span class="status-symbol" style="color: var(--x-color)">✕</span></div>
+
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal">
+      <button class="close-btn" onclick="hideRules()">×</button>
+      <h2>📖 Правила игры</h2>
+      <h3>🎯 Цель игры</h3>
+      <p>Собрать определённое количество своих знаков в ряд раньше соперника.</p>
+      <h3>🎮 Как играть</h3>
+      <ul>
+        <li>Игроки ходят по очереди</li>
+        <li><span style="color: var(--x-color); font-weight: 900;">✕ X</span> — всегда ходит первым</li>
+        <li><span style="color: var(--o-color); font-weight: 900;">◯ O</span> — ходит вторым</li>
+      </ul>
+      <h3>🏆 Как победить</h3>
+      <p>Нужно выстроить свои знаки в непрерывную линию (горизонталь, вертикаль или диагональ).</p>
+      <div class="example">✕ ✕ ✕<br><small style="color: #333; font-weight: normal;">3 в ряд = победа!</small></div>
+      <h3>🤝 Ничья</h3>
+      <p>Если все клетки заполнены, а победителя нет — объявляется ничья.</p>
+      <button class="close-modal-btn" onclick="hideRules()">Понятно, играть!</button>
+    </div>
+  </div>
+
+<script>
+  // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
+  let size = 6;
+  let winCount = 5;
+  let board = [];
+  let currentPlayer = 'X';
+  let gameActive = true;
+  let mode = 'bot';
+  let playerSymbol = 'X';
+  let scores = { X: 0, O: 0 };
+
+  // === ЭЛЕМЕНТЫ DOM ===
+  let boardEl, statusEl, scoreXEl, scoreOEl, rulesModal;
+  let symbolLabel, sizeSelect, winSelect, modeSelect, symbolSelect;
+
+  // === ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===
+  window.onload = function() {
+    boardEl = document.getElementById('board');
+    statusEl = document.getElementById('status');
+    scoreXEl = document.getElementById('scoreX');
+    scoreOEl = document.getElementById('scoreO');
+    rulesModal = document.getElementById('rulesModal');
+    symbolLabel = document.getElementById('symbolLabel');
+    sizeSelect = document.getElementById('sizeSelect');
+    winSelect = document.getElementById('winSelect');
+    modeSelect = document.getElementById('modeSelect');
+    symbolSelect = document.getElementById('symbolSelect');
+
+    // Загружаем счет из localStorage
+    const saved = localStorage.getItem('ttt_scores');
+    if (saved) {
+      try {
+        scores = JSON.parse(saved);
+      } catch(e) {
+        scores = { X: 0, O: 0 };
+      }
+    }
+    
+    // Настраиваем обработчики событий
+    sizeSelect.addEventListener('change', function() {
+      size = parseInt(this.value);
+      updateWinOptions();
+      resetGame();
+    });
+    
+    winSelect.addEventListener('change', function() {
+      winCount = parseInt(this.value);
+      resetGame();
+    });
+    
+    modeSelect.addEventListener('change', function() {
+      mode = this.value;
+      toggleSymbolVisibility();
+      resetGame();
+    });
+    
+    symbolSelect.addEventListener('change', function() {
+      playerSymbol = this.value;
+      resetGame();
+    });
+    
+    // Закрытие модалки
+    rulesModal.addEventListener('click', function(e) { 
+      if (e.target === rulesModal) hideRules(); 
+    });
+    
+    document.addEventListener('keydown', function(e) { 
+      if (e.key === 'Escape') hideRules(); 
+    });
+
+    // Показываем правила при первом запуске
+    if (!localStorage.getItem('ttt_rules_seen')) {
+      setTimeout(showRules, 500);
+    }
+
+    // Инициализация
+    updateWinOptions();
+    renderScores();
+    toggleSymbolVisibility();
+    resetGame();
+  };
+
+  function toggleSymbolVisibility() {
+    if (mode === 'bot') {
+      symbolLabel.style.display = 'flex';
+    } else {
+      symbolLabel.style.display = 'none';
+    }
+  }
+
+  function updateWinOptions() {
+    const currentVal = winSelect.value ? parseInt(winSelect.value) : 3;
+    winSelect.innerHTML = '';
+    
+    const min = 3;
+    const max = size;
+    
+    for (let i = min; i <= max; i++) {
+      const option = document.createElement('option');
+      option.value = i;
+      option.textContent = i + ' в ряд';
+      winSelect.appendChild(option);
+    }
+    
+    // Выбираем подходящее значение
+    const newVal = Math.min(Math.max(currentVal, min), max);
+    winSelect.value = newVal;
+    winCount = newVal;
+  }
+
+  function resetGame() {
+    board = Array(size * size).fill('');
+    currentPlayer = 'X';
+    gameActive = true;
+    updateStatus();
+    renderBoard();
+
+    // Если бот играет за X (игрок выбрал O)
+    if (mode === 'bot' && playerSymbol === 'O') {
+      setTimeout(botMove, 600);
+    }
+  }
+
+  function updateStatus() {
+    const symbol = currentPlayer === 'X' ? '✕' : '◯';
+    const color = currentPlayer === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+    statusEl.innerHTML = 'Ходят: <span class="status-symbol" style="color: ' + color + '">' + symbol + '</span>';
+  }
+
+  function renderScores() {
+    scoreXEl.textContent = scores.X;
+    scoreOEl.textContent = scores.O;
+  }
+
+  function clearScore() {
+    scores = { X: 0, O: 0 };
+    localStorage.setItem('ttt_scores', JSON.stringify(scores));
+    renderScores();
+  }
+
+  function saveScores() {
+    localStorage.setItem('ttt_scores', JSON.stringify(scores));
+  }
+
+  function renderBoard() {
+    if (!boardEl) return;
+    
+    boardEl.innerHTML = '';
+    boardEl.style.gridTemplateColumns = 'repeat(' + size + ', 1fr)';
+    boardEl.style.gap = '8px';
+    
+    for (let i = 0; i < size * size; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      
+      const cellValue = board[i];
+      if (cellValue) {
+        cell.classList.add('taken', cellValue.toLowerCase());
+        cell.textContent = cellValue === 'X' ? '✕' : '◯';
+      }
+      
+      // Проверяем можно ли кликнуть
+      const isHumanTurn = (mode === 'bot') ? (currentPlayer === playerSymbol) : true;
+      
+      if (gameActive && !cellValue && isHumanTurn) {
+        cell.addEventListener('click', function() {
+          handleCellClick(i);
+        });
+        cell.style.cursor = 'pointer';
+      } else {
+        cell.style.cursor = 'default';
+      }
+      
+      boardEl.appendChild(cell);
+    }
+  }
+
+  function handleCellClick(index) {
+    if (!gameActive || board[index] !== '') return;
+    if (mode === 'bot' && currentPlayer !== playerSymbol) return;
+
+    makeMove(index, currentPlayer);
+    
+    if (!gameActive) return;
+
+    if (mode === 'bot') {
+      setTimeout(botMove, 400);
+    }
+  }
+
+  function makeMove(index, player) {
+    board[index] = player;
+    
+    const winInfo = checkWin(player);
+    if (winInfo) {
+      endGame(player, winInfo);
+      return;
+    }
+    
+    if (!board.includes('')) {
+      endGame('draw');
+      return;
+    }
+
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    updateStatus();
+    renderBoard();
+  }
+
+  function endGame(winner, winInfo) {
+    gameActive = false;
+    
+    if (winner === 'draw') {
+      statusEl.innerHTML = '🤝 Ничья!';
+    } else {
+      const symbol = winner === 'X' ? '✕' : '◯';
+      const color = winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+      statusEl.innerHTML = '🎉 Победили: <span class="status-symbol" style="color: ' + color + '">' + symbol + '</span>!';
+      
+      scores[winner]++;
+      saveScores();
+      renderScores();
+      
+      // Подсвечиваем победную линию
+      if (winInfo && winInfo.length > 0) {
+        setTimeout(function() {
+          highlightWinningCells(winInfo);
+        }, 300);
+      }
+    }
+    renderBoard();
+  }
+
+  function highlightWinningCells(indices) {
+    const cells = boardEl.querySelectorAll('.cell');
+    indices.forEach(function(idx) {
+      if (cells[idx]) {
+        cells[idx].classList.add('win');
+      }
+    });
+  }
+
+  function checkWin(player) {
+    const s = size;
+    const w = winCount;
+    
+    // Горизонтали
+    for (let r = 0; r < s; r++) {
+      for (let c = 0; c <= s - w; c++) {
+        let line = [];
+        let match = true;
+        for (let k = 0; k < w; k++) {
+          const idx = r * s + (c + k);
+          line.push(idx);
+          if (board[idx] !== player) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return line;
+      }
+    }
+    
+    // Вертикали
+    for (let c = 0; c < s; c++) {
+      for (let r = 0; r <= s - w; r++) {
+        let line = [];
+        let match = true;
+        for (let k = 0; k < w; k++) {
+          const idx = (r + k) * s + c;
+          line.push(idx);
+          if (board[idx] !== player) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return line;
+      }
+    }
+    
+    // Диагональ \
+    for (let r = 0; r <= s - w; r++) {
+      for (let c = 0; c <= s - w; c++) {
+        let line = [];
+        let match = true;
+        for (let k = 0; k < w; k++) {
+          const idx = (r + k) * s + (c + k);
+          line.push(idx);
+          if (board[idx] !== player) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return line;
+      }
+    }
+    
+    // Диагональ /
+    for (let r = 0; r <= s - w; r++) {
+      for (let c = w - 1; c < s; c++) {
+        let line = [];
+        let match = true;
+        for (let k = 0; k < w; k++) {
+          const idx = (r + k) * s + (c - k);
+          line.push(idx);
+          if (board[idx] !== player) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return line;
+      }
+    }
+    
+    return null;
+  }
+
+  function botMove() {
+    if (!gameActive) return;
+    
+    const botSymbol = (playerSymbol === 'X') ? 'O' : 'X';
+    
+    let move = findBestMove(botSymbol);
+    if (move === -1) move = findBestMove(playerSymbol);
+    
+    if (move === -1) {
+      const center = Math.floor((size * size) / 2);
+      if (board[center] === '') {
+        move = center;
+      } else {
+        const available = [];
+        for (let i = 0; i < board.length; i++) {
+          if (board[i] === '') available.push(i);
+        }
+        if (available.length > 0) {
+          move = available[Math.floor(Math.random() * available.length)];
+        }
+      }
+    }
+    
+    if (move !== -1) {
+      makeMove(move, botSymbol);
+    }
+  }
+  
+  function findBestMove(targetPlayer) {
+    const s = size;
+    const w = winCount;
+    
+    const checkLine = function(indices) {
+      let playerCount = 0;
+      let emptyCount = 0;
+      let emptyIdx = -1;
+      
+      for (let i = 0; i < indices.length; i++) {
+        const idx = indices[i];
+        if (board[idx] === targetPlayer) playerCount++;
+        else if (board[idx] === '') {
+          emptyCount++;
+          emptyIdx = idx;
+        }
+        else return -1;
+      }
+      
+      if (playerCount === w - 1 && emptyCount === 1) return emptyIdx;
+      return -1;
+    };
+    
+    // Горизонтали и вертикали
+    for (let r = 0; r < s; r++) {
+      for (let c = 0; c <= s - w; c++) {
+        let indices = [];
+        for (let k = 0; k < w; k++) indices.push(r * s + c + k);
+        let res = checkLine(indices);
+        if (res !== -1) return res;
+      }
+    }
+    
+    for (let c = 0; c < s; c++) {
+      for (let r = 0; r <= s - w; r++) {
+        let indices = [];
+        for (let k = 0; k < w; k++) indices.push((r + k) * s + c);
+        let res = checkLine(indices);
+        if (res !== -1) return res;
+      }
+    }
+    
+    return -1;
+  }
+
+  function showRules() {
+    rulesModal.classList.add('active');
+  }
+
+  function hideRules() {
+    rulesModal.classList.remove('active');
+    localStorage.setItem('ttt_rules_seen', 'true');
+  }
+</script>
+</body>
+</html>
+
